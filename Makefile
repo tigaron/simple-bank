@@ -19,7 +19,7 @@ migratedown:
 	migrate -path db/migration -database "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/simple_bank?sslmode=disable" -verbose down
 
 sqlc:
-	sqlc generate
+	docker run --rm --volume ${shell pwd}:/src --workdir /src kjconroy/sqlc generate
 
 test:
 	go test -v -cover ./...
