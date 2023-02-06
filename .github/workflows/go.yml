@@ -39,6 +39,10 @@ jobs:
         echo "${{ secrets.ENV_FILE }}" > .env
         echo "${{ secrets.ENV_FILE }}" > ./db/sqlc/.env
 
+    - name: Install migrate
+      run: |
+        curl -fsSL $(curl -fsSL https://api.github.com/repos/golang-migrate/migrate/releases/latest | grep "tag_name" | awk '{print "https://github.com/golang-migrate/migrate/releases/download/" substr($2, 2, length($2)-3) "/migrate.linux-amd64.tar.gz"}') | tar xz migrate && mkdir -p $HOME/bin && mv ./migrate $HOME/bin/migrate && export PATH=$HOME/bin:$PATH
+
     - name: Run migration
       run: make migrateup
 
