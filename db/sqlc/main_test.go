@@ -2,18 +2,15 @@ package db
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 	"os"
 	"testing"
 
-	_ "github.com/joho/godotenv/autoload"
 	_ "github.com/lib/pq"
+	"github.com/tigaron/simple-bank/util"
 )
 
 var (
-	dbDriver    = "postgres"
-	dbSource    = fmt.Sprintf("postgresql://%s:%s@%s:%s/simple_bank?sslmode=disable", os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_PORT"))
 	testQueries *Queries
 	testDB      *sql.DB
 )
@@ -21,7 +18,12 @@ var (
 func TestMain(m *testing.M) {
 	var err error
 
-	testDB, err = sql.Open(dbDriver, dbSource)
+	config, err := util.LoadConfig("../..")
+	if err != nil {
+		log.Fatal("cannot load config:", err)
+	}
+
+	testDB, err = sql.Open(config.DBDriver, config.DBSource)
 	if err != nil {
 		log.Fatal("cannot connect to db:", err)
 	}

@@ -18,14 +18,14 @@ jobs:
         env:
           POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          POSTGRES_DB: simple_bank
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+        ports:
+          - ${{ secrets.POSTGRES_PORT }}:${{ secrets.POSTGRES_PORT }}
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-        ports:
-          - 5432:5432
 
     steps:
     - name: Check out code
@@ -38,8 +38,7 @@ jobs:
 
     - name: Create env file
       run: |
-        echo "${{ secrets.ENV_FILE }}" > .env
-        echo "${{ secrets.ENV_FILE }}" > ./db/sqlc/.env
+        echo "${{ secrets.ENV_FILE }}" > app.env
 
     - name: Install migrate
       run: |
