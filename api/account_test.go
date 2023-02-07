@@ -17,6 +17,96 @@ import (
 	"github.com/tigaron/simple-bank/util"
 )
 
+func TestCreateAccountAPI(t *testing.T) {
+	account := randomAccount()
+
+	testCases := []struct {
+		name          string
+		arg           db.CreateAccountParams
+		buildStubs    func(store *mockdb.MockStore, arg db.CreateAccountParams)
+		checkResponse func(t *testing.T, recorder *httptest.ResponseRecorder)
+	}{
+		{
+			name: "OK",
+			arg: db.CreateAccountParams{
+				Owner:    account.Owner,
+				Balance:  0,
+				Currency: account.Currency,
+			},
+			buildStubs: func(store *mockdb.MockStore, arg db.CreateAccountParams) {
+				store.EXPECT().
+					CreateAccount(gomock.Any(), gomock.Eq(arg)).
+					Times(1).
+					Return(account, nil)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, recorder.Code)
+				requireBodyMatchAccount(t, recorder.Body, account)
+			},
+		},
+		{
+			name: "InternalError",
+			arg: db.CreateAccountParams{
+				Owner:    account.Owner,
+				Balance:  0,
+				Currency: account.Currency,
+			},
+			buildStubs: func(store *mockdb.MockStore, arg db.CreateAccountParams) {
+				store.EXPECT().
+					CreateAccount(gomock.Any(), gomock.Eq(arg)).
+					Times(1).
+					Return(db.Account{}, sql.ErrConnDone)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		{
+			name: "InvalidBody",
+			arg: db.CreateAccountParams{
+				Owner:    account.Owner,
+				Balance:  0,
+				Currency: "JPY",
+			},
+			buildStubs: func(store *mockdb.MockStore, arg db.CreateAccountParams) {
+				store.EXPECT().
+					CreateAccount(gomock.Any(), gomock.Eq(arg)).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			// build stubs
+			store := mockdb.NewMockStore(ctrl)
+			tc.buildStubs(store, tc.arg)
+
+			// start test server and send request
+			server := NewServer(store)
+			recorder := httptest.NewRecorder()
+
+			url := "/accounts"
+			request, err := http.NewRequest(http.MethodPost, url, createBody(tc.arg))
+			require.NoError(t, err)
+
+			server.router.ServeHTTP(recorder, request)
+
+			// check response
+			tc.checkResponse(t, recorder)
+		})
+	}
+
+}
+
 func TestGetAccountAPI(t *testing.T) {
 	account := randomAccount()
 
@@ -125,4 +215,9 @@ func requireBodyMatchAccount(t *testing.T, body *bytes.Buffer, account db.Accoun
 	err = json.Unmarshal(data, &gotAccount)
 	require.NoError(t, err)
 	require.Equal(t, account, gotAccount)
+}
+
+func createBody(body interface{}) io.Reader {
+	json, _ := json.Marshal(body)
+	return bytes.NewReader(json)
 }
